@@ -95,24 +95,16 @@
 
   function render() {
     board.innerHTML = '';
-    // background cells
-    for (let i = 0; i < N * N; i++) {
-      const c = document.createElement('div');
-      c.className = 't2048-cell';
-      board.appendChild(c);
-    }
-    // tiles overlay (positioned absolute relative to .t2048-board)
-    const cs = getComputedStyle(board);
-    const tile = parseFloat(cs.getPropertyValue('--tile'));
-    const gap = parseFloat(cs.getPropertyValue('--gap'));
     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
       const v = grid[r][c];
-      if (!v) continue;
-      const t = document.createElement('div');
-      t.className = 't2048-tile v' + v;
-      t.style.transform = `translate(${gap + c * (tile + gap)}px, ${gap + r * (tile + gap)}px)`;
-      t.textContent = v;
-      board.appendChild(t);
+      const el = document.createElement('div');
+      if (v) {
+        el.className = 't2048-tile v' + v;
+        el.textContent = v;
+      } else {
+        el.className = 't2048-cell';
+      }
+      board.appendChild(el);
     }
     scoreEl.textContent = score;
     hiEl.textContent = hi;
@@ -120,9 +112,12 @@
   }
 
   function gameOver() {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block';
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.55);color:#fff;border-radius:6px;font-size:1.5em';
-    overlay.innerHTML = '<div>Game over</div><div style="font-size:.7em;opacity:.85;margin-top:6px">Score ' + score + '</div>';
+    overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.55);color:#fff;border-radius:6px;font-size:1.5em;z-index:10';
+    overlay.innerHTML = '<div>Game over</div><div style="font-size:.7em;opacity:.85;margin-top:6px">Score ' + score + ' &middot; press New Game</div>';
+    board.style.position = 'relative';
     board.appendChild(overlay);
   }
 
