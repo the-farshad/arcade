@@ -314,6 +314,21 @@ body {
 .t2048-tile.v1024 { background: #370617; color: #ffe66d; font-size: 1.2em; }
 .t2048-tile.v2048 { background: #03071e; color: #ffd60a; font-size: 1.2em; }
 
+.t2048-tile.spawn { animation: t2048-spawn 0.18s ease-out; }
+.t2048-tile.merge { animation: t2048-merge 0.16s ease-in-out; }
+
+@keyframes t2048-spawn {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes t2048-merge {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
 @media (max-width: 460px) {
   .t2048-board {
     grid-template-columns: repeat(4, 70px);

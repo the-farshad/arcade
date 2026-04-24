@@ -7,6 +7,8 @@
   const bestEl = document.getElementById('best');
 
   let grid, score, hi, lastSnapshot;
+  let lastSpawn = null;   // {r, c}
+  let lastMerges = [];    // [{r, c}]
 
   // ---------- model ----------
 
@@ -22,9 +24,10 @@
 
   function spawn(g) {
     const empties = emptyCells(g);
-    if (!empties.length) return;
+    if (!empties.length) { lastSpawn = null; return; }
     const [r, c] = empties[(Math.random() * empties.length) | 0];
     g[r][c] = Math.random() < 0.9 ? 2 : 4;
+    lastSpawn = { r, c };
   }
 
   function clone(g) { return g.map(row => row.slice()); }
@@ -62,12 +65,27 @@
   }
 
   function move(dir) {
-    // 0=left, 1=up, 2=right, 3=down — rotate so it's a left move
     let g = clone(grid);
     for (let i = 0; i < dir; i++) g = rotateCW(g);
+    const before = clone(g);
     const { changed, gained } = moveLeft(g);
     if (!changed) return false;
+    // detect merges (in rotated space): cells whose value doubled vs before
+    const merges = [];
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      if (g[r][c] && before[r][c] && g[r][c] === before[r][c] * 2) merges.push([r, c]);
+    }
+    // rotate g back; rotate merge positions back too
     for (let i = 0; i < (4 - dir) % 4; i++) g = rotateCW(g);
+    // rotate each merge coord back: applying rotateCW (4-dir)%4 times
+    function rotPoint(r, c, times) {
+      for (let i = 0; i < times; i++) { const nr = c, nc = N - 1 - r; r = nr; c = nc; }
+      return [r, c];
+    }
+    lastMerges = merges.map(([r, c]) => {
+      const [nr, nc] = rotPoint(r, c, (4 - dir) % 4);
+      return { r: nr, c: nc };
+    });
     lastSnapshot = { grid: clone(grid), score };
     grid = g;
     score += gained;
@@ -95,12 +113,15 @@
 
   function render() {
     board.innerHTML = '';
+    const mergeSet = new Set(lastMerges.map(m => m.r + ',' + m.c));
     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
       const v = grid[r][c];
       const el = document.createElement('div');
       if (v) {
         el.className = 't2048-tile v' + v;
         el.textContent = v;
+        if (lastSpawn && lastSpawn.r === r && lastSpawn.c === c) el.classList.add('spawn');
+        else if (mergeSet.has(r + ',' + c)) el.classList.add('merge');
       } else {
         el.className = 't2048-cell';
       }
@@ -124,6 +145,8 @@
   function reset() {
     grid = emptyGrid();
     score = 0;
+    lastSpawn = null;
+    lastMerges = [];
     spawn(grid);
     spawn(grid);
     lastSnapshot = null;
@@ -139,12 +162,16 @@
 
   // ---------- input ----------
 
+  // Direction mapping: rotateCW(g) maps original (r,c)->(c,N-1-r); applying
+  // 1 CW rotation then moveLeft is equivalent to a DOWN move on the original
+  // (and 3 CW rotations + moveLeft is UP). So:
+  //   0 = left, 1 = down, 2 = right, 3 = up
   document.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if (k === 'arrowleft' || k === 'a')  { tryMove(0); e.preventDefault(); }
-    if (k === 'arrowup' || k === 'w')    { tryMove(1); e.preventDefault(); }
+    if (k === 'arrowdown' || k === 's')  { tryMove(1); e.preventDefault(); }
     if (k === 'arrowright' || k === 'd') { tryMove(2); e.preventDefault(); }
-    if (k === 'arrowdown' || k === 's')  { tryMove(3); e.preventDefault(); }
+    if (k === 'arrowup' || k === 'w')    { tryMove(3); e.preventDefault(); }
     if (k === 'u') doUndo();
   });
 
@@ -157,8 +184,9 @@
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+    // swipe right=2, left=0, down=1, up=3 (matches keyboard mapping)
     if (Math.abs(dx) > Math.abs(dy)) tryMove(dx > 0 ? 2 : 0);
-    else tryMove(dy > 0 ? 3 : 1);
+    else tryMove(dy > 0 ? 1 : 3);
     touchStart = null;
   });
 
