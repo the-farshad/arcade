@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Breakout | Arcade</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Ubuntu:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="../assets/Farshad-Ghorbani.svg">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="stylesheet" href="../styles/style.css">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark' || t === 'light' || t === 'sepia') document.documentElement.setAttribute('data-theme', t);
+        var f = localStorage.getItem('font');
+        if (['vt323','serif','plex-serif','sans','ubuntu','atkinson'].indexOf(f) >= 0) document.documentElement.setAttribute('data-font', f);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+
+<body>
+  <main class="page">
+    <header class="page-header">
+      <a href="../index.html" class="back-link">&larr; arcade</a>
+      <h1>Breakout</h1>
+    </header>
+
+    <div class="reader-controls">
+      <div class="seg" data-control="theme" role="group" aria-label="Theme">
+        <button type="button" data-value="light" title="Light">&#9728;</button>
+        <button type="button" data-value="sepia" title="Sepia">&#9681;</button>
+        <button type="button" data-value="dark"  title="Dark">&#9790;</button>
+      </div>
+      <div class="seg" data-control="font" role="group" aria-label="Font">
+        <button type="button" data-value="vt323"      style="font-family:'VT323',monospace">Aa</button>
+        <button type="button" data-value="serif"      style="font-family:'Lora',Georgia,serif">Aa</button>
+        <button type="button" data-value="plex-serif" style="font-family:'IBM Plex Serif',Georgia,serif">Aa</button>
+        <button type="button" data-value="sans"       style="font-family:'Inter',system-ui,sans-serif">Aa</button>
+        <button type="button" data-value="ubuntu"     style="font-family:'Ubuntu',system-ui,sans-serif">Aa</button>
+        <button type="button" data-value="atkinson"   style="font-family:'Atkinson Hyperlegible',system-ui,sans-serif">Aa</button>
+      </div>
+    </div>
+
+    <div class="game-shell">
+      <div class="game-status">
+        <span><span class="stat-label">Score</span><span id="score">0</span></span>
+        <span><span class="stat-label">Hi</span><span id="hi">0</span></span>
+        <span><span class="stat-label">Lives</span><span id="lives">3</span></span>
+        <span><span class="stat-label">Level</span><span id="level">1</span></span>
+      </div>
+      <canvas id="bk" width="540" height="420" class="game-canvas"></canvas>
+      <div class="game-controls">
+        <button class="btn primary" id="play">Start</button>
+        <button class="btn" id="pause">Pause</button>
+        <button class="btn" id="reset">Reset</button>
+      </div>
+      <p class="game-help">&larr;/&rarr; or A/D &middot; mouse/touch drag &middot; P pause &middot; Space launch</p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    Built by <a href="https://thefarshad.com">Farshad</a> &middot;
+    <a href="https://github.com/the-farshad/arcade">source on GitHub</a>
+  </footer>
+
+  <script src="../scripts/theme.js"></script>
+  <script src="./breakout.js"></script>
+</body>
+
+</html>
