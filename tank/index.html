@@ -44,25 +44,22 @@
         <button type="button" data-value="ubuntu"     style="font-family:'Ubuntu',system-ui,sans-serif">Aa</button>
         <button type="button" data-value="atkinson"   style="font-family:'Atkinson Hyperlegible',system-ui,sans-serif">Aa</button>
       </div>
-      <div class="seg" data-control="mode" role="group" aria-label="Mode">
-        <button type="button" data-value="ai" class="active">vs AI</button>
-        <button type="button" data-value="2p">2-player</button>
-      </div>
     </div>
 
     <div class="game-shell">
       <div class="game-status">
-        <span><span class="stat-label">P1</span><span id="s1">0</span></span>
-        <span><span class="stat-label">P2</span><span id="s2">0</span></span>
-        <span><span class="stat-label">Round</span><span id="round">1</span></span>
+        <span><span class="stat-label">Score</span><span id="s1">0</span></span>
+        <span><span class="stat-label">Lives</span><span id="s2">3</span></span>
+        <span><span class="stat-label">Level</span><span id="round">1</span></span>
+        <span><span class="stat-label">Hi</span><span id="hi">0</span></span>
       </div>
-      <canvas id="tank" width="600" height="420" class="game-canvas"></canvas>
+      <canvas id="tank" width="312" height="480" class="game-canvas"></canvas>
       <div class="game-controls">
         <button class="btn primary" id="play">Start</button>
         <button class="btn" id="pause">Pause</button>
         <button class="btn" id="reset">Reset</button>
       </div>
-      <p class="game-help">P1: WASD + Space &middot; P2: arrows + Enter &middot; first to 5 wins</p>
+      <p class="game-help">&larr;/&rarr; or A/D to move &middot; Space / &uarr; / W to fire &middot; P pause &middot; tap edges on mobile</p>
     </div>
   </main>
 
