@@ -174,7 +174,7 @@
   document.addEventListener('keydown', (e) => {
     keys[e.key.toLowerCase()] = true;
     if (e.key.toLowerCase() === 'p') togglePause();
-    if (['arrowup','arrowdown'].includes(e.key.toLowerCase())) e.preventDefault();
+    if (['arrowup','arrowdown','w','s','p'].includes(e.key.toLowerCase())) e.preventDefault();
   });
   document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 

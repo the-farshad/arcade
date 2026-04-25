@@ -224,7 +224,7 @@
       e.preventDefault();
     }
     if (k === ' ') { hardDrop(); e.preventDefault(); }
-    if (k === 'p') togglePause();
+    if (k === 'p') { togglePause(); e.preventDefault(); }
     draw();
   });
 

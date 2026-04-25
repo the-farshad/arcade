@@ -172,7 +172,7 @@
     if (k === 'arrowdown' || k === 's')  { tryMove(1); e.preventDefault(); }
     if (k === 'arrowright' || k === 'd') { tryMove(2); e.preventDefault(); }
     if (k === 'arrowup' || k === 'w')    { tryMove(3); e.preventDefault(); }
-    if (k === 'u') doUndo();
+    if (k === 'u') { doUndo(); e.preventDefault(); }
   });
 
   let touchStart = null;

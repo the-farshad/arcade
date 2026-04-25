@@ -169,7 +169,7 @@
     if (k === 'arrowdown' || k === 's')  { setDir(0,  1); e.preventDefault(); }
     if (k === 'arrowleft' || k === 'a')  { setDir(-1, 0); e.preventDefault(); }
     if (k === 'arrowright' || k === 'd') { setDir(1, 0); e.preventDefault(); }
-    if (k === 'p') togglePause();
+    if (k === 'p') { togglePause(); e.preventDefault(); }
   });
 
   // touch: swipe

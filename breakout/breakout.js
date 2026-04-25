@@ -191,7 +191,7 @@
     keys[e.key.toLowerCase()] = true;
     if (e.key === ' ') { attached = false; e.preventDefault(); }
     if (e.key.toLowerCase() === 'p') togglePause();
-    if (['arrowleft','arrowright'].includes(e.key.toLowerCase())) e.preventDefault();
+    if (['arrowleft','arrowright','a','d','p'].includes(e.key.toLowerCase())) e.preventDefault();
   });
   document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 

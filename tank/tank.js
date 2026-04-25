@@ -309,7 +309,7 @@
   document.addEventListener('keydown', (e) => {
     keys[e.key.toLowerCase()] = true;
     if (e.key.toLowerCase() === 'p') togglePause();
-    if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
+    if (['arrowup','arrowdown','arrowleft','arrowright',' ','w','a','s','d','p'].includes(e.key.toLowerCase())) e.preventDefault();
   });
   document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 

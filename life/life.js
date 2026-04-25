@@ -180,8 +180,9 @@
   canvas.addEventListener('touchend', () => { painting = false; });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'p' || e.key === 'P') toggle();
-    if (e.key === 's' || e.key === 'S') { step(); draw(); }
+    const k = e.key.toLowerCase();
+    if (k === 'p') { toggle(); e.preventDefault(); }
+    if (k === 's') { step(); draw(); e.preventDefault(); }
   });
 
   document.getElementById('play').addEventListener('click', toggle);
