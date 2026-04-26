@@ -277,13 +277,15 @@ body {
 /* ---------- 2048 board ---------- */
 
 .t2048-board {
+  --t2048-tile: min(86px, calc((100vw - 98px) / 4));
   display: grid;
-  grid-template-columns: repeat(4, 86px);
-  grid-template-rows: repeat(4, 86px);
+  grid-template-columns: repeat(4, var(--t2048-tile));
+  grid-template-rows: repeat(4, var(--t2048-tile));
   gap: 10px;
   padding: 10px;
   background: var(--btn-bg-strong);
   border-radius: 6px;
+  touch-action: none;
 }
 
 .t2048-cell, .t2048-tile {
@@ -292,7 +294,7 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 1.6em;
+  font-size: calc(var(--t2048-tile) * 0.4);
 }
 
 .t2048-cell { background: var(--btn-bg); }
@@ -308,11 +310,11 @@ body {
 .t2048-tile.v16   { background: #ff8c42; color: #ffffff; }
 .t2048-tile.v32   { background: #ff5e3a; color: #ffffff; }
 .t2048-tile.v64   { background: #e63946; color: #ffffff; }
-.t2048-tile.v128  { background: #d62828; color: #ffffff; font-size: 1.4em; }
-.t2048-tile.v256  { background: #9d0208; color: #ffffff; font-size: 1.4em; }
-.t2048-tile.v512  { background: #6a040f; color: #ffffff; font-size: 1.4em; }
-.t2048-tile.v1024 { background: #370617; color: #ffe66d; font-size: 1.2em; }
-.t2048-tile.v2048 { background: #03071e; color: #ffd60a; font-size: 1.2em; }
+.t2048-tile.v128  { background: #d62828; color: #ffffff; font-size: calc(var(--t2048-tile) * 0.34); }
+.t2048-tile.v256  { background: #9d0208; color: #ffffff; font-size: calc(var(--t2048-tile) * 0.34); }
+.t2048-tile.v512  { background: #6a040f; color: #ffffff; font-size: calc(var(--t2048-tile) * 0.34); }
+.t2048-tile.v1024 { background: #370617; color: #ffe66d; font-size: calc(var(--t2048-tile) * 0.28); }
+.t2048-tile.v2048 { background: #03071e; color: #ffd60a; font-size: calc(var(--t2048-tile) * 0.28); }
 
 .t2048-tile.spawn { animation: t2048-spawn 0.18s ease-out; }
 .t2048-tile.merge { animation: t2048-merge 0.16s ease-in-out; }
@@ -329,14 +331,12 @@ body {
   100% { transform: scale(1); }
 }
 
-@media (max-width: 460px) {
+@media (max-width: 380px) {
   .t2048-board {
-    grid-template-columns: repeat(4, 70px);
-    grid-template-rows: repeat(4, 70px);
-    gap: 8px;
-    padding: 8px;
+    --t2048-tile: min(86px, calc((100vw - 78px) / 4));
+    gap: 6px;
+    padding: 6px;
   }
-  .t2048-cell, .t2048-tile { font-size: 1.4em; }
 }
 
 /* ---------- footer ---------- */

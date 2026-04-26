@@ -228,6 +228,61 @@
     draw();
   });
 
+  // touch — tap to rotate, swipe horizontally to move, swipe down for hard drop
+  let touchStart = null, touchAnchorX = 0, touchHardDropped = false;
+  canvas.addEventListener('touchstart', (e) => {
+    if (!current || gameover) return;
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    touchStart = { x: t.clientX, y: t.clientY, t: Date.now(), moved: false };
+    touchAnchorX = t.clientX;
+    touchHardDropped = false;
+  }, { passive: true });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (!touchStart || !current || gameover || paused || !running || touchHardDropped) return;
+    const t = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const cellPx = rect.width / COLS;
+    const dy = t.clientY - touchStart.y;
+    let dx = t.clientX - touchAnchorX;
+
+    while (dx > cellPx) {
+      if (valid(current, 1)) current.x++;
+      touchAnchorX += cellPx;
+      dx -= cellPx;
+      touchStart.moved = true;
+    }
+    while (dx < -cellPx) {
+      if (valid(current, -1)) current.x--;
+      touchAnchorX -= cellPx;
+      dx += cellPx;
+      touchStart.moved = true;
+    }
+
+    if (dy > rect.height * 0.18 && Date.now() - touchStart.t < 500) {
+      hardDrop();
+      touchHardDropped = true;
+      touchStart.moved = true;
+    }
+
+    draw();
+    e.preventDefault();
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (e) => {
+    if (!touchStart) return;
+    const dur = Date.now() - touchStart.t;
+    if (!touchStart.moved && !touchHardDropped && current && !gameover && running && !paused && dur < 300) {
+      const rotated = rotateCells(current.cells, 1);
+      for (const dx of [0, -1, 1, -2, 2]) {
+        if (valid(current, dx, 0, rotated)) { current.cells = rotated; current.x += dx; break; }
+      }
+      draw();
+    }
+    touchStart = null;
+  });
+
   document.getElementById('play').addEventListener('click', start);
   document.getElementById('pause').addEventListener('click', togglePause);
   document.getElementById('reset').addEventListener('click', () => { reset(); cancelAnimationFrame(raf); running = false; });
