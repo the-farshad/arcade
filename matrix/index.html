@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Matrix Rain | Arcade</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="../assets/Farshad-Ghorbani.svg">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background: #000; color: #00ff66;
+      font-family: 'VT323', 'Courier New', monospace;
+      overflow: hidden;
+    }
+    canvas#matrix {
+      display: block; position: fixed; inset: 0;
+      width: 100vw; height: 100vh;
+    }
+    .panel {
+      position: fixed;
+      bottom: 14px; left: 14px;
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      padding: 10px 14px;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(0,255,102,0.35);
+      border-radius: 4px;
+      backdrop-filter: blur(2px);
+      font-size: 0.95em;
+      transition: opacity 0.4s ease;
+      z-index: 10;
+    }
+    .panel.faded { opacity: 0.15; }
+    .panel:hover { opacity: 1; }
+    .panel a, .panel button, .panel select, .panel input[type=range] {
+      color: #00ff66;
+      background: transparent;
+      border: 1px solid rgba(0,255,102,0.4);
+      padding: 4px 10px;
+      font: inherit;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .panel a { text-decoration: none; }
+    .panel button:hover, .panel a:hover { background: rgba(0,255,102,0.12); }
+    .panel label { display: inline-flex; align-items: center; gap: 6px; opacity: 0.8; }
+    .panel select option { background: #000; color: #00ff66; }
+    .panel input[type=range] { padding: 0; height: 22px; vertical-align: middle; cursor: ew-resize; }
+    .panel input[type=color] { width: 28px; height: 26px; padding: 0; border: 1px solid rgba(0,255,102,0.4); background: transparent; cursor: pointer; }
+    .hint {
+      position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+      font-size: 0.85em; opacity: 0.45;
+      letter-spacing: 0.06em;
+      pointer-events: none;
+      z-index: 5;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="matrix" aria-hidden="true"></canvas>
+
+  <div class="hint">Press <strong>F</strong> for fullscreen · <strong>Space</strong> to pause · <strong>H</strong> to hide controls</div>
+
+  <div class="panel" id="panel">
+    <a href="../index.html" title="back to arcade">&larr; arcade</a>
+    <label>set
+      <select id="charset">
+        <option value="katakana" selected>Katakana</option>
+        <option value="binary">Binary</option>
+        <option value="hex">Hex</option>
+        <option value="kurdish">Kurdish</option>
+        <option value="latin">Latin</option>
+        <option value="symbols">Symbols</option>
+      </select>
+    </label>
+    <label>color
+      <input type="color" id="color" value="#00ff66" />
+    </label>
+    <label>speed
+      <input type="range" id="speed" min="20" max="120" value="55" />
+    </label>
+    <label>density
+      <input type="range" id="density" min="6" max="22" value="14" />
+    </label>
+    <button id="pause" type="button">⏸ pause</button>
+    <button id="fullscreen" type="button">⛶ fullscreen</button>
+  </div>
+
+  <script>
+    const CHARSETS = {
+      katakana: 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝ0123456789',
+      binary:   '01',
+      hex:      '0123456789ABCDEF',
+      kurdish:  'ابپتجچحخدڕزژسشعغفڤقکگلڵمنوۆیێە٠١٢٣٤٥٦٧٨٩',
+      latin:    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
+      symbols:  '!@#$%^&*()_+-=[]{};:,.<>/?\\|~`',
+    };
+
+    const canvas = document.getElementById('matrix');
+    const ctx = canvas.getContext('2d');
+    let chars = CHARSETS.katakana;
+    let color = '#00ff66';
+    let fontSize = 16;        // derived from density
+    let speedFactor = 0.55;   // multiplier on per-frame drop step
+    let drops = [];           // y position (in cells) for each column
+    let columns = 0;
+    let dpr = 1;
+    let paused = false;
+
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      canvas.width  = window.innerWidth  * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width  = window.innerWidth  + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      columns = Math.ceil(window.innerWidth / fontSize);
+      drops = new Array(columns);
+      for (let i = 0; i < columns; i++) drops[i] = Math.random() * -50;
+    }
+    window.addEventListener('resize', resize);
+
+    function hexToRgb(hex) {
+      const m = hex.replace('#', '');
+      return {
+        r: parseInt(m.slice(0, 2), 16),
+        g: parseInt(m.slice(2, 4), 16),
+        b: parseInt(m.slice(4, 6), 16),
+      };
+    }
+
+    function tick() {
+      if (paused) { requestAnimationFrame(tick); return; }
+      // Translucent fade — creates the trailing tail effect.
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.075)';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+      const c = hexToRgb(color);
+      const headColor  = 'rgba(220, 255, 220, 0.95)';
+      const bodyColor  = 'rgb(' + c.r + ',' + c.g + ',' + c.b + ')';
+      const dimColor   = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ', 0.55)';
+
+      ctx.font = fontSize + 'px VT323, "Courier New", monospace';
+      ctx.textAlign = 'center';
+
+      for (let i = 0; i < columns; i++) {
+        const ch = chars[(Math.random() * chars.length) | 0];
+        const x = i * fontSize + fontSize / 2;
+        const y = drops[i] * fontSize;
+        // Bright "head" of the stream
+        ctx.fillStyle = headColor;
+        ctx.fillText(ch, x, y);
+        // Slightly dimmer trail char immediately above the head
+        if (drops[i] > 1) {
+          const ch2 = chars[(Math.random() * chars.length) | 0];
+          ctx.fillStyle = bodyColor;
+          ctx.fillText(ch2, x, y - fontSize);
+        }
+        if (drops[i] > 2) {
+          const ch3 = chars[(Math.random() * chars.length) | 0];
+          ctx.fillStyle = dimColor;
+          ctx.fillText(ch3, x, y - fontSize * 2);
+        }
+        // Reset the column once it scrolls past the bottom — randomize a little.
+        if (y > window.innerHeight && Math.random() > 0.975) drops[i] = 0;
+        drops[i] += speedFactor;
+      }
+      requestAnimationFrame(tick);
+    }
+    resize();
+    requestAnimationFrame(tick);
+
+    // ---- controls ----
+    document.getElementById('charset').addEventListener('change', (e) => {
+      chars = CHARSETS[e.target.value] || CHARSETS.katakana;
+    });
+    document.getElementById('color').addEventListener('input', (e) => {
+      color = e.target.value;
+    });
+    document.getElementById('speed').addEventListener('input', (e) => {
+      speedFactor = (+e.target.value) / 100;
+    });
+    document.getElementById('density').addEventListener('input', (e) => {
+      fontSize = +e.target.value;
+      resize();
+    });
+    document.getElementById('pause').addEventListener('click', () => {
+      paused = !paused;
+      document.getElementById('pause').textContent = paused ? '▶ resume' : '⏸ pause';
+    });
+    document.getElementById('fullscreen').addEventListener('click', () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    });
+
+    // Auto-fade the panel after 3s of inactivity; reveal on mouse move.
+    const panel = document.getElementById('panel');
+    let fadeTimer = setTimeout(() => panel.classList.add('faded'), 3000);
+    function nudgePanel() {
+      panel.classList.remove('faded');
+      clearTimeout(fadeTimer);
+      fadeTimer = setTimeout(() => panel.classList.add('faded'), 3000);
+    }
+    document.addEventListener('mousemove', nudgePanel);
+    document.addEventListener('keydown', nudgePanel);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.key === ' ') {
+        e.preventDefault();
+        document.getElementById('pause').click();
+      } else if (e.key === 'f' || e.key === 'F') {
+        document.getElementById('fullscreen').click();
+      } else if (e.key === 'h' || e.key === 'H') {
+        panel.style.display = panel.style.display === 'none' ? '' : 'none';
+      }
+    });
+  </script>
+</body>
+
+</html>

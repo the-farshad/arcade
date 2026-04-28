@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Hacker Terminal | Arcade</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="../assets/Farshad-Ghorbani.svg">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <style>
+    :root {
+      --term-bg: #050805;
+      --term-fg: #6dff6d;
+      --term-dim: #267e26;
+      --term-accent: #aaffaa;
+      --term-warn: #ffd166;
+      --term-err: #ff4f6d;
+    }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background: var(--term-bg); color: var(--term-fg);
+      font-family: 'VT323', 'Courier New', monospace;
+      font-size: 18px;
+      line-height: 1.25;
+      overflow: hidden;
+    }
+    /* CRT scanline overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.18) 3px,
+        rgba(0,0,0,0) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+      mix-blend-mode: multiply;
+    }
+    body::after {
+      /* subtle CRT glow / vignette */
+      content: '';
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at center, rgba(0,255,80,0.04) 0%, rgba(0,0,0,0.55) 100%);
+      pointer-events: none;
+      z-index: 99;
+    }
+    .term {
+      position: fixed; inset: 0;
+      padding: 22px 26px 60px;
+      overflow: hidden;
+      white-space: pre;
+      word-break: break-all;
+      text-shadow: 0 0 6px rgba(120,255,120,0.55), 0 0 1px rgba(255,255,255,0.4);
+    }
+    .term .ln { display: block; }
+    .term .dim   { color: var(--term-dim); }
+    .term .ok    { color: var(--term-accent); }
+    .term .warn  { color: var(--term-warn); }
+    .term .err   { color: var(--term-err); font-weight: bold; }
+    .term .bar   { color: var(--term-accent); }
+    .term .blink { animation: blink 0.8s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    @keyframes glitchX {
+      0%   { transform: translate(0,0); }
+      20%  { transform: translate(-2px,1px); }
+      40%  { transform: translate(2px,-1px); }
+      60%  { transform: translate(-1px,2px); }
+      80%  { transform: translate(1px,-2px); }
+      100% { transform: translate(0,0); }
+    }
+    .glitch { animation: glitchX 0.3s steps(2) 1; }
+
+    .panel {
+      position: fixed;
+      bottom: 14px; right: 14px;
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(120,255,120,0.4);
+      border-radius: 4px;
+      font-size: 0.95em;
+      transition: opacity 0.4s ease;
+      z-index: 200;
+    }
+    .panel.faded { opacity: 0.15; }
+    .panel:hover { opacity: 1; }
+    .panel a, .panel button {
+      color: var(--term-fg);
+      background: transparent;
+      border: 1px solid rgba(120,255,120,0.4);
+      padding: 3px 10px;
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .panel a:hover, .panel button:hover { background: rgba(120,255,120,0.12); }
+    .panel select {
+      color: var(--term-fg);
+      background: transparent;
+      border: 1px solid rgba(120,255,120,0.4);
+      padding: 3px 6px;
+      font: inherit;
+      border-radius: 2px;
+    }
+    .panel select option { background: #050805; color: var(--term-fg); }
+
+    .status {
+      position: fixed; top: 12px; right: 16px;
+      font-size: 0.95em; color: var(--term-dim);
+      z-index: 200;
+      letter-spacing: 0.04em;
+    }
+    .status .blink { color: var(--term-warn); }
+  </style>
+</head>
+
+<body>
+  <div class="term" id="term"></div>
+
+  <div class="status">[ <span class="blink">●</span> SECURE LINK ESTABLISHED ]</div>
+
+  <div class="panel" id="panel">
+    <a href="../index.html" title="back to arcade">&larr; arcade</a>
+    <select id="theme">
+      <option value="green" selected>Green Phosphor</option>
+      <option value="amber">Amber CRT</option>
+      <option value="cyan">Cyan ICE</option>
+      <option value="red">Red Alert</option>
+    </select>
+    <select id="speed">
+      <option value="40">Slow</option>
+      <option value="22" selected>Fast</option>
+      <option value="8">Hyperspeed</option>
+    </select>
+    <button id="pause" type="button">⏸ pause</button>
+    <button id="boom" type="button">💥 ACCESS</button>
+    <button id="fullscreen" type="button">⛶ fullscreen</button>
+  </div>
+
+  <script>
+    const term = document.getElementById('term');
+
+    // --- A pile of plausible-looking technobabble ---
+    const HOSTS = ['mainframe', 'gw-edge-04', 'db-prod-2a', 'kube-master', 'auth-svc',
+      'k8s-worker-12', 'redis-cluster-3', 'router-bgp', 'firewall-fw01', 'satcom-link',
+      'crypto-vault', 'datacenter-eu1', 'ldap-replica', 'logger-collector'];
+    const HEXBYTES = () => Array.from({length: 16}, () =>
+      Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase()).join(' ');
+    const ADDR = () => Array.from({length: 4}, () => Math.floor(Math.random() * 256)).join('.');
+    const MAC  = () => Array.from({length: 6}, () =>
+      Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join(':');
+    const HASH = (n) => {
+      const c = '0123456789abcdef';
+      let s = ''; for (let i = 0; i < n; i++) s += c[(Math.random() * 16) | 0];
+      return s;
+    };
+    const PORTS = [22, 80, 443, 53, 3306, 5432, 6379, 8080, 9092, 27017, 11211, 1433];
+    const PROTO = ['SSH', 'HTTPS', 'TLS', 'DNS', 'SMB', 'RPC', 'IPSEC', 'WireGuard'];
+    const TARGETS = ['/etc/shadow', '/var/log/auth.log', '/proc/kcore',
+      '/dev/mem', '/root/.ssh/id_rsa', '/sys/kernel/security',
+      '~/.bash_history', '/var/spool/cron/root', '/srv/secrets/master.key'];
+    const VULNS = ['CVE-2024-3094', 'CVE-2023-28252', 'CVE-2022-0185',
+      'CVE-2021-44228', 'CVE-2020-1472', 'EternalBlue', 'BlueKeep', 'Heartbleed'];
+    const CIPHERS = ['AES-256-GCM', 'ChaCha20-Poly1305', 'RSA-4096',
+      'X25519', 'Ed25519', 'SHA3-512'];
+    const VERBS_OK = ['established', 'authenticated', 'verified', 'accepted',
+      'mounted', 'decrypted', 'unlocked', 'imported', 'spawned', 'attached'];
+    const VERBS_BAD = ['rejected', 'denied', 'spoofed', 'hijacked', 'leaked',
+      'tampered', 'corrupted'];
+
+    function pick(arr) { return arr[(Math.random() * arr.length) | 0]; }
+
+    const LINE_BUILDERS = [
+      () => 'CONNECT ' + ADDR() + ':' + pick(PORTS) + ' via ' + pick(PROTO) +
+            ' ... <span class="ok">OK</span> [' + (40 + Math.random() * 80 | 0) + ' ms]',
+      () => 'AUTH user=' + pick(['root','sysop','admin','svc-deploy','farshad']) +
+            ' key=' + HASH(16) + ' :: <span class="ok">' + pick(VERBS_OK) + '</span>',
+      () => 'CRYPTO ' + pick(CIPHERS) + ' handshake ' + pick(['init','complete','renegotiate']) +
+            ' [fp=' + HASH(8) + ']',
+      () => 'TUNNEL up ' + pick(HOSTS) + ' &lt;-&gt; ' + pick(HOSTS) + ' (mtu=1420 enc=' + pick(CIPHERS) + ')',
+      () => 'PROBE ' + ADDR() + ' tcp/' + pick(PORTS) + ' state=' + pick(['open','filtered','closed','open|filtered']),
+      () => 'SCAN ' + pick(VULNS) + ' fingerprint match=' + (Math.random() > 0.5 ? '<span class="warn">YES</span>' : 'no'),
+      () => 'EXFIL ' + pick(TARGETS) + ' (' + (5 + Math.random() * 800 | 0) + ' KB) -> /tmp/' + HASH(6) + '.dat',
+      () => 'INJECT payload sha256=' + HASH(32) + ' into ' + pick(['kernel','session','stream','cookie-jar']),
+      () => 'PROXY chain ' + Array.from({length: 3 + (Math.random() * 3 | 0)},
+            () => ADDR()).join(' -&gt; '),
+      () => 'KEX ' + pick(CIPHERS) + ' ' + ADDR() + ':' + pick(PORTS) + ' :: ' + pick(VERBS_OK).toUpperCase(),
+      () => 'PKT  ' + HEXBYTES(),
+      () => '<span class="dim">' + new Date().toISOString() + ' [' + pick(HOSTS) + '] ' + HEXBYTES().slice(0, 23) + '...</span>',
+      () => 'BRUTE ' + pick(['ssh','smb','ldap']) + '://' + ADDR() + ' tries=' + (1000 + Math.random() * 90000 | 0) +
+            ' rate=' + (300 + Math.random() * 1700 | 0) + '/s',
+      () => 'PAYLOAD upload chunk ' + (1 + Math.random() * 99 | 0) + '/' + (50 + Math.random() * 300 | 0) +
+            ' [<span class="bar">' + bar() + '</span>]',
+      () => 'TRACE hop ' + (Math.random() * 12 | 0) + ' ' + ADDR() + ' (' + (1 + Math.random() * 80 | 0) + ' ms)',
+      () => 'BUFFER overflow @ 0x' + HASH(8).toUpperCase() + ' length=' + (256 + Math.random() * 4096 | 0),
+      () => 'SCRAMBLE ' + HASH(40),
+      () => 'DNS ' + pick(['A','AAAA','MX','TXT']) + ' ' + pick(HOSTS) + '.' + pick(['internal','corp','io','net']) + ' -> ' + ADDR(),
+      () => 'MEMORY map ' + pick(['libc-2.36','glibc','vmlinux','ld-linux']) + ' base=0x' + HASH(12).toUpperCase(),
+      () => 'NIC ' + MAC() + ' rx=' + (Math.random() * 9999999 | 0) + ' tx=' + (Math.random() * 9999999 | 0) + ' err=0',
+      () => 'CRACK ' + pick(['md5','sha1','ntlm','bcrypt']) + '(' + HASH(8) + ') ... ' +
+            (Math.random() > 0.7 ? '<span class="ok">FOUND: ' + pick(['hunter2','letmein','password!','correct horse']) + '</span>' :
+                                    '<span class="dim">no match</span>'),
+      () => '<span class="warn">WARN</span> rate-limit hit on ' + pick(HOSTS) + ', backing off ' + (Math.random() * 800 | 0) + ' ms',
+      () => '<span class="err">FAIL</span> ' + pick(VERBS_BAD) + ' from ' + ADDR() + ' (' + pick(VULNS) + ')',
+    ];
+    function bar() {
+      const len = 22;
+      const filled = (Math.random() * len) | 0;
+      return '#'.repeat(filled) + '-'.repeat(len - filled);
+    }
+
+    let speed = 22;          // ms between lines
+    let paused = false;
+
+    function appendLine(html, glitch) {
+      const ln = document.createElement('span');
+      ln.className = 'ln' + (glitch ? ' glitch' : '');
+      ln.innerHTML = html;
+      term.appendChild(ln);
+      // Trim — keep DOM lean
+      while (term.childNodes.length > 400) term.removeChild(term.firstChild);
+      // Auto-scroll: keep newest visible at the bottom
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function loop() {
+      if (paused) { setTimeout(loop, 100); return; }
+      const builder = pick(LINE_BUILDERS);
+      const glitch = Math.random() < 0.05;
+      appendLine(builder(), glitch);
+      // occasional batch burst
+      if (Math.random() < 0.08) {
+        for (let i = 0; i < 3 + (Math.random() * 4 | 0); i++) {
+          appendLine(LINE_BUILDERS[10](), false); // raw hex packet line
+        }
+      }
+      setTimeout(loop, speed + Math.random() * speed * 0.6);
+    }
+    loop();
+
+    // Initial banner
+    setTimeout(() => {
+      appendLine('<span class="ok">[+] Initializing covert channel…</span>');
+      appendLine('<span class="ok">[+] Loading rootkit module rk-' + HASH(6) + '.ko</span>');
+      appendLine('<span class="ok">[+] Bypassing IDS signatures (' + pick(VULNS) + ')</span>');
+      appendLine('<span class="dim">────────────────────────────────────────────</span>');
+    }, 50);
+
+    // ---- "ACCESS GRANTED" theatrics ----
+    function accessGranted() {
+      paused = true;
+      document.getElementById('pause').textContent = '▶ resume';
+      const banner = [
+        '',
+        '<span class="ok">╔════════════════════════════════════════╗</span>',
+        '<span class="ok">║                                        ║</span>',
+        '<span class="ok">║         A C C E S S   G R A N T E D    ║</span>',
+        '<span class="ok">║                                        ║</span>',
+        '<span class="ok">║   ' + pick(['MAINFRAME','PENTAGON','SWIFT','GIBSON','SKYNET','TITAN']).padEnd(32) + '   ║</span>',
+        '<span class="ok">║   session: ' + HASH(20).padEnd(28) + '║</span>',
+        '<span class="ok">║                                        ║</span>',
+        '<span class="ok">╚════════════════════════════════════════╝</span>',
+        '',
+      ];
+      banner.forEach(l => appendLine(l, true));
+      setTimeout(() => { paused = false; document.getElementById('pause').textContent = '⏸ pause'; }, 2400);
+    }
+
+    // ---- controls ----
+    document.getElementById('speed').addEventListener('change', (e) => {
+      speed = +e.target.value;
+    });
+    document.getElementById('theme').addEventListener('change', (e) => {
+      const themes = {
+        green: { fg:'#6dff6d', dim:'#267e26', acc:'#aaffaa' },
+        amber: { fg:'#ffb949', dim:'#7a5210', acc:'#ffd685' },
+        cyan:  { fg:'#5cf2ff', dim:'#1e6f78', acc:'#b8f7ff' },
+        red:   { fg:'#ff5b5b', dim:'#7a2424', acc:'#ffb3b3' },
+      };
+      const t = themes[e.target.value] || themes.green;
+      document.documentElement.style.setProperty('--term-fg', t.fg);
+      document.documentElement.style.setProperty('--term-dim', t.dim);
+      document.documentElement.style.setProperty('--term-accent', t.acc);
+    });
+    document.getElementById('pause').addEventListener('click', () => {
+      paused = !paused;
+      document.getElementById('pause').textContent = paused ? '▶ resume' : '⏸ pause';
+    });
+    document.getElementById('boom').addEventListener('click', accessGranted);
+    document.getElementById('fullscreen').addEventListener('click', () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    });
+
+    // Auto-fade panel
+    const panel = document.getElementById('panel');
+    let fadeTimer = setTimeout(() => panel.classList.add('faded'), 3000);
+    function nudge() {
+      panel.classList.remove('faded');
+      clearTimeout(fadeTimer);
+      fadeTimer = setTimeout(() => panel.classList.add('faded'), 3000);
+    }
+    document.addEventListener('mousemove', nudge);
+    document.addEventListener('keydown', nudge);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.key === ' ') { e.preventDefault(); document.getElementById('pause').click(); }
+      else if (e.key === 'f' || e.key === 'F') document.getElementById('fullscreen').click();
+      else if (e.key === 'h' || e.key === 'H') panel.style.display = panel.style.display === 'none' ? '' : 'none';
+      else if (e.key === 'a' || e.key === 'A') accessGranted();
+    });
+  </script>
+</body>
+
+</html>
